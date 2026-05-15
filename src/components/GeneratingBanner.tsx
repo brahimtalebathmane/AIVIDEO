@@ -8,12 +8,14 @@ import { QUALITY_PRESETS } from "@/lib/types";
 
 interface GeneratingBannerProps {
   active: boolean;
+  submitting: boolean;
   pendingTasks: VideoTask[];
   onCancelAll: () => Promise<void>;
 }
 
 export function GeneratingBanner({
   active,
+  submitting,
   pendingTasks,
   onCancelAll,
 }: GeneratingBannerProps) {
@@ -69,7 +71,9 @@ export function GeneratingBanner({
           />
           <div className="min-w-0">
             <p className="text-sm font-medium text-violet-200">
-              Generating {pendingTasks.length > 1 ? `${pendingTasks.length} videos` : "your video"}…
+              {submitting && pendingTasks.length === 0
+                ? "Submitting to AI engine…"
+                : `Generating ${pendingTasks.length > 1 ? `${pendingTasks.length} videos` : "your video"}…`}
             </p>
             <p className="text-xs text-violet-300/70">
               {etaHint} · {time} elapsed · smooth motion & cinematic lighting
@@ -97,7 +101,7 @@ export function GeneratingBanner({
             ) : (
               <Square className="h-3.5 w-3.5 fill-current" />
             )}
-            Stop all
+            Stop
           </button>
         </div>
       </motion.div>

@@ -29,14 +29,19 @@ export async function POST(
 
     await cancelVideoGeneration(task.requestId);
 
-    const updated =
-      (await db.updateTask(task.id, {
-        status: "cancelled",
-        error: undefined,
-        siliconStatus: "Cancelled",
-      })) ?? task;
+    const updated = await db.updateTask(task.id, {
+      status: "cancelled",
+      error: undefined,
+      siliconStatus: "Cancelled",
+    });
 
-    return NextResponse.json({ task: updated });
+    return NextResponse.json({
+      task: updated ?? {
+        ...task,
+        status: "cancelled",
+        siliconStatus: "Cancelled",
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Cancel failed";

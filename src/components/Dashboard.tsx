@@ -57,7 +57,7 @@ export function Dashboard() {
     generateProductionShot,
     generateProductionSequence,
     cancelTask,
-    cancelAllPending,
+    stopAllGeneration,
     cancelSequence,
     refresh,
   } = useTasks();
@@ -151,15 +151,12 @@ export function Dashboard() {
             {(generating || hasPending) && (
               <GeneratingBanner
                 active={generating || hasPending}
+                submitting={generating}
                 pendingTasks={pendingTasks}
                 onCancelAll={async () => {
-                  try {
-                    cancelSequence();
-                    await cancelAllPending();
-                    toast("Generation stopped", "info");
-                  } catch {
-                    toast("Could not cancel all tasks", "error");
-                  }
+                  cancelSequence();
+                  await stopAllGeneration();
+                  toast("Generation stopped", "info");
                 }}
               />
             )}
@@ -191,7 +188,10 @@ export function Dashboard() {
               <div id="studio" className="scroll-mt-24">
               <StudioShell
                 generating={generating}
-                onCancelSequence={cancelSequence}
+                onCancelSequence={() => {
+                  cancelSequence();
+                  void stopAllGeneration();
+                }}
                 onQuickGenerate={async (prompt, preset, imageSize) => {
                   const result = await generate(prompt, preset, imageSize);
                   if (result.success) {
@@ -241,12 +241,9 @@ export function Dashboard() {
               <LiveFeed
                 tasks={tasks}
                 onCancelTask={async (id) => {
-                  try {
-                    await cancelTask(id);
-                    toast("Generation cancelled", "info");
-                  } catch {
-                    toast("Could not cancel task", "error");
-                  }
+                  cancelSequence();
+                  await cancelTask(id);
+                  toast("Generation stopped", "info");
                 }}
               />
             </div>

@@ -106,38 +106,93 @@ export function useTasks() {
     []
   );
 
-  const cancelTask = useCallback(async (taskId: string) => {
-    const res = await fetch(`/api/tasks/${taskId}/cancel`, {
-      method: "POST",
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Cancel failed");
-
-    const updated = data.task as VideoTask;
+  const applyCancelledLocally = useCallback((taskId: string): VideoTask[] => {
+    const now = new Date().toISOString();
     const next = tasksRef.current.map((t) =>
-      t.id === taskId ? updated : t
+      t.id === taskId
+        ? {
+            ...t,
+            status: "cancelled" as const,
+            error: undefined,
+            siliconStatus: "Cancelled",
+            updatedAt: now,
+          }
+        : t
     );
     tasksRef.current = next;
     setTasks(next);
     saveClientTasks(next);
     setReadyVideos(next.filter((t) => t.status === "ready" && t.videoUrl));
-    return updated;
+    return next;
   }, []);
 
-  const cancelAllPending = useCallback(async () => {
+  const cancelTask = useCallback(
+    async (taskId: string) => {
+      setGenerating(false);
+      applyCancelledLocally(taskId);
+
+      try {
+        const res = await fetch(`/api/tasks/${taskId}/cancel`, {
+          method: "POST",
+        });
+        const data = await res.json();
+        if (res.ok && data.task) {
+          const updated = data.task as VideoTask;
+          const next = tasksRef.current.map((t) =>
+            t.id === taskId ? updated : t
+          );
+          tasksRef.current = next;
+          setTasks(next);
+          saveClientTasks(next);
+          return updated;
+        }
+      } catch {
+        /* keep optimistic cancel */
+      }
+
+      return (
+        tasksRef.current.find((t) => t.id === taskId) ?? {
+          id: taskId,
+          status: "cancelled",
+        }
+      ) as VideoTask;
+    },
+    [applyCancelledLocally]
+  );
+
+  const stopAllGeneration = useCallback(async () => {
     submitAbortRef.current?.abort();
     sequenceAbortRef.current = true;
+    setGenerating(false);
 
     const pending = tasksRef.current.filter((t) => isPending(t.status));
-    const results = await Promise.allSettled(
-      pending.map((t) => cancelTask(t.id))
-    );
-    const failed = results.filter((r) => r.status === "rejected").length;
-    if (failed > 0 && pending.length === failed) {
-      throw new Error("Failed to cancel tasks");
+    const now = new Date().toISOString();
+
+    if (pending.length > 0) {
+      const next = tasksRef.current.map((t) =>
+        isPending(t.status)
+          ? {
+              ...t,
+              status: "cancelled" as const,
+              error: undefined,
+              siliconStatus: "Cancelled",
+              updatedAt: now,
+            }
+          : t
+      );
+      tasksRef.current = next;
+      setTasks(next);
+      saveClientTasks(next);
     }
+
+    await Promise.allSettled(
+      pending.map((t) =>
+        fetch(`/api/tasks/${t.id}/cancel`, { method: "POST" })
+      )
+    );
+
     pollTasks();
-  }, [cancelTask, pollTasks]);
+  }, [pollTasks]);
 
   const cancelSequence = useCallback(() => {
     sequenceAbortRef.current = true;
@@ -345,7 +400,7 @@ export function useTasks() {
     generateProductionShot,
     generateProductionSequence,
     cancelTask,
-    cancelAllPending,
+    stopAllGeneration,
     cancelSequence,
     refresh: fetchTasks,
   };
