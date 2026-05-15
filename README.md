@@ -1,4 +1,4 @@
-# Nexus Video — AI Generation Dashboard
+# AIVIDEO — Nexus Video AI Generation Dashboard
 
 Premium text-to-video dashboard built with **Next.js 15**, **Tailwind CSS 4**, and **Framer Motion**, powered by [SiliconFlow](https://siliconflow.com) (`Wan-AI/Wan2.1-T2V-14B`).
 
