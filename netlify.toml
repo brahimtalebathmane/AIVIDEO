@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  # Netlify Pro: up to 26s; adjust polling on client accordingly
+  node_bundler = "esbuild"
+
+[build.environment]
+  NODE_VERSION = "20"
