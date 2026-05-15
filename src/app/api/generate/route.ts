@@ -12,6 +12,7 @@ import {
   submitVideoGeneration,
   VIDEO_MODEL,
 } from "@/lib/siliconflow";
+import { mapGenerationError } from "@/lib/api-errors";
 import { QUALITY_PRESETS, type GenerationMode, type QualityPreset } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -119,16 +120,28 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ task }, { status: 201 });
   } catch (error) {
-    const message =
+    const raw =
       error instanceof Error ? error.message : "Generation failed";
     const isConfig =
-      message.includes("SILICONFLOW_API_KEY") ||
-      message.includes("not configured");
+      raw.includes("SILICONFLOW_API_KEY") || raw.includes("not configured");
+    if (isConfig) {
+      return NextResponse.json(
+        {
+          error:
+            "Server is missing SILICONFLOW_API_KEY. Add it in Netlify → Site settings → Environment variables.",
+        },
+        { status: 503 }
+      );
+    }
     const isClient =
-      message.includes("required") ||
-      message.includes("Invalid") ||
-      message.includes("Prompt");
-    const status = isConfig ? 503 : isClient ? 400 : 502;
-    return NextResponse.json({ error: message }, { status });
+      raw.includes("required") ||
+      raw.includes("Invalid quality") ||
+      raw.includes("Prompt is required") ||
+      raw.includes("Reference image");
+    if (isClient) {
+      return NextResponse.json({ error: raw }, { status: 400 });
+    }
+    const { httpStatus, userMessage } = mapGenerationError(raw);
+    return NextResponse.json({ error: userMessage }, { status: httpStatus });
   }
 }

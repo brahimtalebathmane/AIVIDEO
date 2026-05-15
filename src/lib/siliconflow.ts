@@ -6,13 +6,16 @@ export const VIDEO_MODEL =
 export const I2V_MODEL =
   process.env.SILICONFLOW_I2V_MODEL ?? "Wan-AI/Wan2.2-I2V-A14B";
 
-export const TURBO_T2V_MODEL =
+/** Lighter 720P models for the Fast preset (Turbo is often unavailable) */
+export const FAST_T2V_MODEL =
+  process.env.SILICONFLOW_FAST_T2V_MODEL ??
   process.env.SILICONFLOW_TURBO_T2V_MODEL ??
-  "Wan-AI/Wan2.1-T2V-14B-720P-Turbo";
+  "Wan-AI/Wan2.1-T2V-14B-720P";
 
-export const TURBO_I2V_MODEL =
+export const FAST_I2V_MODEL =
+  process.env.SILICONFLOW_FAST_I2V_MODEL ??
   process.env.SILICONFLOW_TURBO_I2V_MODEL ??
-  "Wan-AI/Wan2.1-I2V-14B-720P-Turbo";
+  "Wan-AI/Wan2.1-I2V-14B-720P";
 
 export type SiliconVideoStatus =
   | "Succeed"

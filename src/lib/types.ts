@@ -54,13 +54,13 @@ export interface PresetConfig {
 export const QUALITY_PRESETS: Record<QualityPreset, PresetConfig> = {
   fast: {
     label: "Fast",
-    hint: "Turbo · ~2× faster",
+    hint: "720P · quicker turnaround",
     tier: "fast",
     suffix:
       " Smooth natural motion, stable subject, coherent scene, realistic lighting, clear textures, cinematic framing, temporally consistent frames.",
     imageSize: "1280x720",
-    t2vModel: "Wan-AI/Wan2.1-T2V-14B-720P-Turbo",
-    i2vModel: "Wan-AI/Wan2.1-I2V-14B-720P-Turbo",
+    t2vModel: "Wan-AI/Wan2.1-T2V-14B-720P",
+    i2vModel: "Wan-AI/Wan2.1-I2V-14B-720P",
   },
   cinematic: {
     label: "Cinematic",

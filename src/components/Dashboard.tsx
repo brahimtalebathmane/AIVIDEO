@@ -2,11 +2,11 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, RefreshCw, Video, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTasks } from "@/hooks/useTasks";
 import { GeneratingBanner } from "./GeneratingBanner";
 import { LiveFeed } from "./LiveFeed";
-import { Sidebar } from "./Sidebar";
+import { Sidebar, type NavSection } from "./Sidebar";
 import { StatsBar } from "./StatsBar";
 import { StudioShell } from "./StudioShell";
 import { useToast } from "./Toast";
@@ -14,7 +14,36 @@ import { VideoGallery } from "./VideoGallery";
 
 export function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<NavSection>("dashboard");
+  const [apiStatus, setApiStatus] = useState<{
+    ok: boolean;
+    platform?: string;
+  } | null>(null);
   const { toast } = useToast();
+
+  const scrollToSection = useCallback((section: NavSection) => {
+    setActiveSection(section);
+    const id =
+      section === "dashboard"
+        ? "dashboard-top"
+        : section === "studio"
+          ? "studio"
+          : section === "gallery"
+            ? "video-gallery"
+            : "api-status";
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeSection !== "api") return;
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((data) => setApiStatus({ ok: Boolean(data.ok), platform: data.platform }))
+      .catch(() => setApiStatus({ ok: false }));
+  }, [activeSection]);
   const {
     tasks,
     readyVideos,
@@ -35,7 +64,13 @@ export function Dashboard() {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeSection={activeSection}
+        onNavigate={scrollToSection}
+        apiStatus={apiStatus}
+      />
 
       <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="glass-strong sticky top-0 z-30 flex items-center justify-between border-b px-4 py-4 lg:px-8">
@@ -83,7 +118,34 @@ export function Dashboard() {
           animate={{ opacity: 1 }}
           className="flex-1 space-y-6 p-4 lg:p-8"
         >
-          <StatsBar tasks={tasks} generating={generating || hasPending} />
+          <div id="dashboard-top">
+            <StatsBar tasks={tasks} generating={generating || hasPending} />
+          </div>
+
+          <div
+            id="api-status"
+            className={`scroll-mt-24 rounded-xl border px-4 py-3 text-sm transition-colors ${
+              activeSection === "api"
+                ? "border-violet-500/30 bg-violet-500/10 text-violet-200"
+                : "border-transparent py-0 opacity-0 h-0 overflow-hidden p-0"
+            }`}
+          >
+            {activeSection === "api" && apiStatus && (
+              <p>
+                API key:{" "}
+                <strong>{apiStatus.ok ? "configured" : "missing"}</strong>
+                {apiStatus.platform ? ` · ${apiStatus.platform}` : ""}.{" "}
+                <a
+                  href="/api/health"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  Health JSON
+                </a>
+              </p>
+            )}
+          </div>
 
           <AnimatePresence>
             {(generating || hasPending) && (
@@ -126,6 +188,7 @@ export function Dashboard() {
 
           <div className="grid gap-6 xl:grid-cols-5">
             <div className="space-y-6 xl:col-span-3">
+              <div id="studio" className="scroll-mt-24">
               <StudioShell
                 generating={generating}
                 onCancelSequence={cancelSequence}
@@ -168,7 +231,10 @@ export function Dashboard() {
                   return result;
                 }}
               />
-              <VideoGallery videos={readyVideos} />
+              </div>
+              <div id="video-gallery" className="scroll-mt-24">
+                <VideoGallery videos={readyVideos} />
+              </div>
             </div>
 
             <div className="xl:col-span-2">

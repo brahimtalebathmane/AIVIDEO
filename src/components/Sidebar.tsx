@@ -9,19 +9,34 @@ import {
   Zap,
 } from "lucide-react";
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", active: true },
-  { icon: Film, label: "Gallery", active: false },
-  { icon: Sparkles, label: "Studio", active: false },
-  { icon: Zap, label: "API", active: false },
+export type NavSection = "dashboard" | "studio" | "gallery" | "api";
+
+const navItems: {
+  id: NavSection;
+  icon: typeof LayoutDashboard;
+  label: string;
+}[] = [
+  { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { id: "gallery", icon: Film, label: "Gallery" },
+  { id: "studio", icon: Sparkles, label: "Studio" },
+  { id: "api", icon: Zap, label: "API" },
 ];
 
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  activeSection: NavSection;
+  onNavigate: (section: NavSection) => void;
+  apiStatus?: { ok: boolean; platform?: string } | null;
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({
+  open,
+  onClose,
+  activeSection,
+  onNavigate,
+  apiStatus,
+}: SidebarProps) {
   return (
     <>
       {open && (
@@ -56,19 +71,24 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             transition={{ delay: 0.1 }}
           >
             <h1 className="text-lg font-bold tracking-tight">Nexus Video</h1>
-            <p className="text-xs text-zinc-500">Wan2.1 T2V Studio</p>
+            <p className="text-xs text-zinc-500">Wan2.2 · T2V + I2V</p>
           </motion.div>
         </motion.div>
 
         <nav className="flex-1 space-y-1 p-4">
           {navItems.map((item, i) => (
             <motion.button
-              key={item.label}
+              key={item.id}
+              type="button"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.05 * i }}
+              onClick={() => {
+                onNavigate(item.id);
+                onClose();
+              }}
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                item.active
+                activeSection === item.id
                   ? "bg-violet-500/15 text-violet-300 ring-1 ring-violet-500/30"
                   : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
               }`}
@@ -90,6 +110,29 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <p className="mt-1 truncate text-sm font-semibold text-zinc-200">
               Wan2.2 I2V + T2V
             </p>
+            {activeSection === "api" && apiStatus && (
+              <motion.div className="mt-3 space-y-1 border-t border-white/5 pt-3 text-xs">
+                <p className="text-zinc-500">API status</p>
+                <p
+                  className={
+                    apiStatus.ok ? "text-emerald-400" : "text-red-400"
+                  }
+                >
+                  {apiStatus.ok ? "Key configured" : "Missing API key"}
+                </p>
+                {apiStatus.platform && (
+                  <p className="text-zinc-600">Host: {apiStatus.platform}</p>
+                )}
+                <a
+                  href="/api/health"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-block text-violet-400 hover:underline"
+                >
+                  Open /api/health
+                </a>
+              </motion.div>
+            )}
             <p className="mt-2 text-xs text-zinc-600">Production pipeline</p>
           </motion.div>
         </div>
