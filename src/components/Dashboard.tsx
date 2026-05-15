@@ -5,10 +5,10 @@ import { Menu, RefreshCw, Video, X } from "lucide-react";
 import { useState } from "react";
 import { useTasks } from "@/hooks/useTasks";
 import { GeneratingBanner } from "./GeneratingBanner";
-import { GenerationForm } from "./GenerationForm";
 import { LiveFeed } from "./LiveFeed";
 import { Sidebar } from "./Sidebar";
 import { StatsBar } from "./StatsBar";
+import { StudioShell } from "./StudioShell";
 import { useToast } from "./Toast";
 import { VideoGallery } from "./VideoGallery";
 
@@ -24,21 +24,10 @@ export function Dashboard() {
     error,
     setError,
     generate,
+    generateProductionShot,
+    generateProductionSequence,
     refresh,
   } = useTasks();
-
-  const handleGenerate = async (
-    prompt: string,
-    preset: Parameters<typeof generate>[1]
-  ) => {
-    const result = await generate(prompt, preset);
-    if (result.success) {
-      toast("Video job queued — usually ready in 2–5 minutes", "success");
-    } else {
-      toast(result.error ?? "Generation failed", "error");
-    }
-    return result;
-  };
 
   return (
     <div className="flex min-h-screen">
@@ -46,7 +35,7 @@ export function Dashboard() {
 
       <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="glass-strong sticky top-0 z-30 flex items-center justify-between border-b px-4 py-4 lg:px-8">
-          <motion.div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -55,17 +44,17 @@ export function Dashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <motion.div>
+            <div>
               <h1 className="text-xl font-bold tracking-tight lg:text-2xl">
                 <span className="gradient-text">AI Video Studio</span>
               </h1>
               <p className="text-xs text-zinc-500">
-                Wan2.2-T2V-A14B · SiliconFlow
+                Production I2V · Wan2.2 · SiliconFlow
               </p>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-2">
+          <motion.div className="flex items-center gap-2">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -82,7 +71,7 @@ export function Dashboard() {
               <Video className="h-3.5 w-3.5" />
               {readyVideos.length} ready
             </div>
-          </div>
+          </motion.div>
         </header>
 
         <motion.div
@@ -121,16 +110,51 @@ export function Dashboard() {
 
           <div className="grid gap-6 xl:grid-cols-5">
             <div className="space-y-6 xl:col-span-3">
-              <GenerationForm
-                onGenerate={handleGenerate}
+              <StudioShell
                 generating={generating}
+                onQuickGenerate={async (prompt, preset) => {
+                  const result = await generate(prompt, preset);
+                  if (result.success) {
+                    toast("Quick clip queued — ~2–5 min", "success");
+                  } else {
+                    toast(result.error ?? "Failed", "error");
+                  }
+                  return result;
+                }}
+                onProductionShot={async (payload) => {
+                  const result = await generateProductionShot(payload);
+                  if (result.success) {
+                    toast(
+                      `${payload.shotLabel} queued with locked reference`,
+                      "success"
+                    );
+                  } else {
+                    toast(result.error ?? "Failed", "error");
+                  }
+                  return result;
+                }}
+                onProductionSequence={async (payloads, onProgress) => {
+                  const result = await generateProductionSequence(
+                    payloads,
+                    onProgress
+                  );
+                  if (result.success > 0) {
+                    toast(
+                      `${result.success} shots queued${result.failed ? ` · ${result.failed} failed` : ""}`,
+                      result.failed ? "info" : "success"
+                    );
+                  } else {
+                    toast(result.error ?? "Sequence failed", "error");
+                  }
+                  return result;
+                }}
               />
               <VideoGallery videos={readyVideos} />
             </div>
 
-            <motion.div className="xl:col-span-2">
+            <div className="xl:col-span-2">
               <LiveFeed tasks={tasks} />
-            </motion.div>
+            </div>
           </div>
         </motion.div>
       </main>

@@ -57,7 +57,24 @@ export function LiveFeed({ tasks }: LiveFeedProps) {
                 exit={{ opacity: 0, x: 12 }}
                 className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3"
               >
-                <motion.div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1">
+                  <motion.div className="mb-1 flex flex-wrap items-center gap-1.5">
+                    {task.mode === "i2v" && (
+                      <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+                        I2V
+                      </span>
+                    )}
+                    {task.shotLabel && (
+                      <span className="text-xs font-semibold text-violet-400">
+                        {task.shotLabel}
+                      </span>
+                    )}
+                    {task.sequenceName && (
+                      <span className="truncate text-[10px] text-zinc-600">
+                        {task.sequenceName}
+                      </span>
+                    )}
+                  </motion.div>
                   <p className="truncate text-sm text-zinc-300">{task.prompt}</p>
                   <p className="mt-1 text-xs text-zinc-600">
                     {QUALITY_PRESETS[task.preset].label} ·{" "}
@@ -66,7 +83,7 @@ export function LiveFeed({ tasks }: LiveFeedProps) {
                   {task.error && (
                     <p className="mt-1 text-xs text-red-400">{task.error}</p>
                   )}
-                </motion.div>
+                </div>
                 <StatusBadge status={task.status} />
               </motion.div>
             ))

@@ -3,6 +3,9 @@ const SILICONFLOW_BASE = "https://api.siliconflow.com/v1";
 export const VIDEO_MODEL =
   process.env.SILICONFLOW_VIDEO_MODEL ?? "Wan-AI/Wan2.2-T2V-A14B";
 
+export const I2V_MODEL =
+  process.env.SILICONFLOW_I2V_MODEL ?? "Wan-AI/Wan2.2-I2V-A14B";
+
 export type SiliconVideoStatus =
   | "Succeed"
   | "InQueue"
@@ -61,6 +64,7 @@ export async function submitVideoGeneration(params: {
   prompt: string;
   imageSize: string;
   negativePrompt?: string;
+  seed?: number;
 }): Promise<SubmitVideoResponse> {
   return siliconFetch<SubmitVideoResponse>("/video/submit", {
     model: VIDEO_MODEL,
@@ -69,6 +73,26 @@ export async function submitVideoGeneration(params: {
     ...(params.negativePrompt && {
       negative_prompt: params.negativePrompt,
     }),
+    ...(params.seed != null && { seed: params.seed }),
+  });
+}
+
+export async function submitImageToVideo(params: {
+  prompt: string;
+  imageSize: string;
+  image: string;
+  negativePrompt?: string;
+  seed?: number;
+}): Promise<SubmitVideoResponse> {
+  return siliconFetch<SubmitVideoResponse>("/video/submit", {
+    model: I2V_MODEL,
+    prompt: params.prompt,
+    image_size: params.imageSize,
+    image: params.image,
+    ...(params.negativePrompt && {
+      negative_prompt: params.negativePrompt,
+    }),
+    ...(params.seed != null && { seed: params.seed }),
   });
 }
 

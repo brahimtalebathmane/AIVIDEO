@@ -7,11 +7,16 @@ export type TaskStatus =
 
 export type QualityPreset = "cinematic" | "realistic" | "anime" | "3d";
 
+export type GenerationMode = "t2v" | "i2v";
+
 export interface VideoTask {
   id: string;
   requestId: string;
   prompt: string;
   preset: QualityPreset;
+  mode?: GenerationMode;
+  sequenceName?: string;
+  shotLabel?: string;
   imageSize: string;
   status: TaskStatus;
   videoUrl?: string;
