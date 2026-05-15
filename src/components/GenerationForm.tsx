@@ -14,7 +14,8 @@ const PRESETS = Object.entries(QUALITY_PRESETS) as [
 interface GenerationFormProps {
   onGenerate: (
     prompt: string,
-    preset: QualityPreset
+    preset: QualityPreset,
+    sceneLabel?: string
   ) => Promise<{ success: boolean; error?: string }>;
   generating: boolean;
 }
@@ -59,7 +60,7 @@ export function GenerationForm({ onGenerate, generating }: GenerationFormProps) 
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe your scene — subject, action, camera angle, lighting, mood..."
-        rows={5}
+        rows={8}
         disabled={generating}
         maxLength={PROMPT_MAX_CHARS + 50}
         className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-4 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"

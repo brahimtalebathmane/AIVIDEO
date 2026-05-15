@@ -73,14 +73,14 @@ export function useTasks() {
   }, []);
 
   const generate = useCallback(
-    async (prompt: string, preset: QualityPreset) => {
+    async (prompt: string, preset: QualityPreset, sceneLabel?: string) => {
       setGenerating(true);
       setError(null);
       try {
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, preset }),
+          body: JSON.stringify({ prompt, preset, sceneLabel }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -88,7 +88,6 @@ export function useTasks() {
         const next = [data.task as VideoTask, ...tasksRef.current];
         setTasks(next);
         saveClientTasks(next);
-        setGenerating(false);
 
         pollTasks();
         return { success: true as const };
@@ -100,6 +99,57 @@ export function useTasks() {
       } finally {
         setGenerating(false);
       }
+    },
+    [pollTasks]
+  );
+
+  const generateAll = useCallback(
+    async (
+      items: { prompt: string; sceneLabel: string }[],
+      preset: QualityPreset
+    ) => {
+      setGenerating(true);
+      setError(null);
+      let success = 0;
+      let failed = 0;
+      let lastError: string | undefined;
+
+      for (const item of items) {
+        try {
+          const res = await fetch("/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: item.prompt,
+              preset,
+              sceneLabel: item.sceneLabel,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error ?? "Generation failed");
+
+          tasksRef.current = [data.task as VideoTask, ...tasksRef.current];
+          success++;
+          await new Promise((r) => setTimeout(r, 800));
+        } catch (err) {
+          failed++;
+          lastError =
+            err instanceof Error ? err.message : "Generation failed";
+        }
+      }
+
+      setTasks([...tasksRef.current]);
+      saveClientTasks(tasksRef.current);
+      setGenerating(false);
+      pollTasks();
+
+      if (lastError && success === 0) setError(lastError);
+
+      return {
+        success,
+        failed,
+        error: lastError,
+      };
     },
     [pollTasks]
   );
@@ -137,6 +187,7 @@ export function useTasks() {
     error,
     setError,
     generate,
+    generateAll,
     refresh: fetchTasks,
   };
 }

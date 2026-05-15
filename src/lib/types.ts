@@ -11,6 +11,7 @@ export interface VideoTask {
   id: string;
   requestId: string;
   prompt: string;
+  sceneLabel?: string;
   preset: QualityPreset;
   imageSize: string;
   status: TaskStatus;
