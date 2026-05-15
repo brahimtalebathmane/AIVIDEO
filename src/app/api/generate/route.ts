@@ -51,6 +51,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Generation failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const isConfig =
+      message.includes("SILICONFLOW_API_KEY") ||
+      message.includes("not configured");
+    const isClient =
+      message.includes("Prompt") ||
+      message.includes("preset") ||
+      message.includes("required");
+    const status = isConfig ? 503 : isClient ? 400 : 502;
+    return NextResponse.json({ error: message }, { status });
   }
 }

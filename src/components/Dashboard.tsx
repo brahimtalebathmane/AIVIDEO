@@ -60,7 +60,7 @@ export function Dashboard() {
                 <span className="gradient-text">AI Video Studio</span>
               </h1>
               <p className="text-xs text-zinc-500">
-                Wan2.1-T2V-14B · 720P · SiliconFlow
+                Wan2.2-T2V-A14B · SiliconFlow
               </p>
             </motion.div>
           </motion.div>

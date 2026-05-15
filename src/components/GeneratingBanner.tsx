@@ -50,7 +50,7 @@ export function GeneratingBanner({ active }: GeneratingBannerProps) {
               Generating your video…
             </p>
             <p className="text-xs text-violet-300/70">
-              Wan2.1 typically takes 2–5 minutes · {time} elapsed
+              Wan2.2 typically takes 2–5 minutes · {time} elapsed
             </p>
           </div>
         </div>

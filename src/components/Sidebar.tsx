@@ -88,7 +88,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           >
             <p className="text-xs font-medium text-zinc-400">Model</p>
             <p className="mt-1 truncate text-sm font-semibold text-zinc-200">
-              Wan2.1-T2V-14B-720P
+              Wan2.2-T2V-A14B
             </p>
             <p className="mt-2 text-xs text-zinc-600">via SiliconFlow</p>
           </motion.div>

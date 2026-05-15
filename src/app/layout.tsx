@@ -11,7 +11,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Nexus Video — AI Generation Studio",
   description:
-    "Premium AI video generation dashboard powered by Wan2.1-T2V-14B",
+    "Premium AI video generation dashboard powered by Wan2.2-T2V-A14B",
 };
 
 export default function RootLayout({
