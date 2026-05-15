@@ -58,11 +58,6 @@ export function LiveFeed({ tasks }: LiveFeedProps) {
                 className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3"
               >
                 <motion.div className="min-w-0 flex-1">
-                  {task.sceneLabel && (
-                    <p className="mb-0.5 text-xs font-semibold text-violet-400">
-                      {task.sceneLabel}
-                    </p>
-                  )}
                   <p className="truncate text-sm text-zinc-300">{task.prompt}</p>
                   <p className="mt-1 text-xs text-zinc-600">
                     {QUALITY_PRESETS[task.preset].label} ·{" "}

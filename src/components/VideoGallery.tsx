@@ -80,11 +80,6 @@ function VideoCard({ task }: { task: VideoTask }) {
       </div>
 
       <div className="p-4">
-        {task.sceneLabel && (
-          <p className="mb-1 text-xs font-semibold text-violet-400">
-            {task.sceneLabel}
-          </p>
-        )}
         <p className="line-clamp-2 text-sm text-zinc-300">{task.prompt}</p>
         <motion.div
           className="mt-3 flex items-center justify-between"

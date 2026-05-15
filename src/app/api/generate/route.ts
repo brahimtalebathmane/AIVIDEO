@@ -12,9 +12,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const prompt = String(body.prompt ?? "").trim();
     const preset = (body.preset ?? "cinematic") as QualityPreset;
-    const sceneLabel = body.sceneLabel
-      ? String(body.sceneLabel).trim()
-      : undefined;
 
     if (!prompt) {
       return NextResponse.json(
@@ -44,7 +41,6 @@ export async function POST(request: NextRequest) {
       id: randomUUID(),
       requestId,
       prompt,
-      sceneLabel,
       preset,
       imageSize: presetConfig.imageSize,
       status: "generating",

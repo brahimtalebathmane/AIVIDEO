@@ -5,7 +5,7 @@ import { Menu, RefreshCw, Video, X } from "lucide-react";
 import { useState } from "react";
 import { useTasks } from "@/hooks/useTasks";
 import { GeneratingBanner } from "./GeneratingBanner";
-import { PromptStudio } from "./PromptStudio";
+import { GenerationForm } from "./GenerationForm";
 import { LiveFeed } from "./LiveFeed";
 import { Sidebar } from "./Sidebar";
 import { StatsBar } from "./StatsBar";
@@ -24,41 +24,18 @@ export function Dashboard() {
     error,
     setError,
     generate,
-    generateAll,
     refresh,
   } = useTasks();
 
   const handleGenerate = async (
     prompt: string,
-    preset: Parameters<typeof generate>[1],
-    sceneLabel?: string
+    preset: Parameters<typeof generate>[1]
   ) => {
-    const result = await generate(prompt, preset, sceneLabel);
+    const result = await generate(prompt, preset);
     if (result.success) {
-      toast(
-        sceneLabel
-          ? `${sceneLabel} queued — usually ready in 2–5 minutes`
-          : "Video job queued — usually ready in 2–5 minutes",
-        "success"
-      );
+      toast("Video job queued — usually ready in 2–5 minutes", "success");
     } else {
       toast(result.error ?? "Generation failed", "error");
-    }
-    return result;
-  };
-
-  const handleGenerateAll = async (
-    items: { prompt: string; sceneLabel: string }[],
-    preset: Parameters<typeof generateAll>[1]
-  ) => {
-    const result = await generateAll(items, preset);
-    if (result.success > 0) {
-      toast(
-        `${result.success} scene${result.success > 1 ? "s" : ""} queued${result.failed ? ` (${result.failed} failed)` : ""}`,
-        result.failed ? "info" : "success"
-      );
-    } else {
-      toast(result.error ?? "All scenes failed to queue", "error");
     }
     return result;
   };
@@ -144,9 +121,8 @@ export function Dashboard() {
 
           <div className="grid gap-6 xl:grid-cols-5">
             <div className="space-y-6 xl:col-span-3">
-              <PromptStudio
+              <GenerationForm
                 onGenerate={handleGenerate}
-                onGenerateAll={handleGenerateAll}
                 generating={generating}
               />
               <VideoGallery videos={readyVideos} />

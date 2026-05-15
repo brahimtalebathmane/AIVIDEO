@@ -17,4 +17,4 @@ export const SAMPLE_PROMPTS = [
   },
 ] as const;
 
-export const PROMPT_MAX_CHARS = 2500;
+export const PROMPT_MAX_CHARS = 500;
