@@ -60,7 +60,6 @@ export interface ProductionSequence {
   id: string;
   name: string;
   bible: ProductionBible;
-  referenceImage: string | null;
   imageSize: ImageSize;
   seed: number | null;
   shots: ProductionShot[];
@@ -73,11 +72,11 @@ export const NEGATIVE_PROMPT =
 
 export const DEFAULT_BIBLE: ProductionBible = {
   character:
-    "Same Russian officer in every shot, consistent face and body, male 45 years old, Soviet military uniform, realistic movement, natural human behavior, realistic facial expressions, realistic hand motion.",
+    "Recurring lead: same Russian officer in every shot — consistent face, age (~45), build, and Soviet military uniform; natural movement, believable expressions, realistic hands. Identity stays locked; pose and framing may change per shot.",
   environment:
-    "1983 Soviet nuclear bunker, old Soviet military control room, green CRT radar screens, detailed environment, realistic shadows.",
+    "Recurring location: 1983 Soviet nuclear bunker control room, green CRT radar screens, concrete walls, cables, realistic shadows — same world every shot, layout may be seen from different angles.",
   look:
-    "Ultra realistic cinematic, dark Cold War atmosphere, red emergency lighting, film grain, anamorphic lens, 4K detail, high-budget Hollywood style, smooth cinematic camera, believable acting, physically accurate motion, no cartoon look.",
+    "Ultra realistic cinematic, dark Cold War atmosphere, red emergency lighting, film grain, anamorphic lens, 4K detail, high-budget Hollywood style, smooth camera, physically accurate motion, no cartoon look.",
 };
 
 export const BUNKER_SHOTS: Omit<ProductionShot, "id">[] = [
@@ -126,7 +125,6 @@ export function defaultSequence(): ProductionSequence {
     id: createSequenceId(),
     name: "Soviet Bunker Sequence",
     bible: { ...DEFAULT_BIBLE },
-    referenceImage: null,
     imageSize: "1280x720",
     seed: null,
     shots: BUNKER_SHOTS.map((s) => ({ ...s, id: createShotId() })),
@@ -142,7 +140,7 @@ export function assembleShotPrompt(
     bible.environment.trim(),
     bible.character.trim(),
     shotAction.trim(),
-    "Natural subtle motion only for this moment. Single continuous take. Temporally stable motion, no morphing or geometry drift.",
+    "This shot uses its own camera angle and composition — not locked to one reference frame. Same character, wardrobe, and location as the series; allow natural variation in blocking and lens. Natural subtle motion for this moment. Single continuous take. Temporally stable motion, no morphing or geometry drift.",
   ].filter(Boolean);
   return truncatePrompt(parts.join(" "));
 }

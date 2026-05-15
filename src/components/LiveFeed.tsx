@@ -77,11 +77,11 @@ export function LiveFeed({ tasks, onCancelTask }: LiveFeedProps) {
                 >
                   <div className="min-w-0 flex-1">
                     <motion.div className="mb-1 flex flex-wrap items-center gap-1.5">
-                      {task.mode === "i2v" && (
-                        <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
-                          I2V
-                        </span>
-                      )}
+                    {(task.mode === "production" || task.mode === "i2v") && (
+                      <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+                        {task.mode === "production" ? "SEQ" : "I2V"}
+                      </span>
+                    )}
                       {task.shotLabel && (
                         <span className="text-xs font-semibold text-violet-400">
                           {task.shotLabel}

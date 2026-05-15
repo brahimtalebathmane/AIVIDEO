@@ -31,7 +31,6 @@ function applyTasks(
 }
 
 export interface ProductionGeneratePayload {
-  referenceImage: string;
   imageSize: ImageSize;
   bible: ProductionBible;
   shotAction: string;
@@ -250,9 +249,8 @@ export function useTasks() {
       try {
         const task = await postGenerate(
           {
-            mode: "i2v",
+            mode: "production",
             preset: payload.preset ?? "cinematic",
-            referenceImage: payload.referenceImage,
             imageSize: payload.imageSize,
             bible: payload.bible,
             shotAction: payload.shotAction,
@@ -310,9 +308,8 @@ export function useTasks() {
         try {
           const task = await postGenerate(
             {
-              mode: "i2v",
+              mode: "production",
               preset: payloads[i].preset ?? "cinematic",
-              referenceImage: payloads[i].referenceImage,
               imageSize: payloads[i].imageSize,
               bible: payloads[i].bible,
               shotAction: payloads[i].shotAction,

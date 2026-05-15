@@ -2,10 +2,9 @@
 
 import { motion } from "framer-motion";
 import {
+  Clapperboard,
   Film,
-  ImagePlus,
   Loader2,
-  Lock,
   Plus,
   Sparkles,
   Trash2,
@@ -13,16 +12,20 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 import type { ProductionGeneratePayload } from "@/hooks/useTasks";
-import { fileToReferenceDataUrl } from "@/lib/image-utils";
 import {
   assembleShotPrompt,
   createShotId,
   defaultSequence,
-  imageSizeLabel,
   type ProductionSequence,
   type ProductionShot,
 } from "@/lib/production";
 import { loadSequence, saveSequence } from "@/lib/project-storage";
+import { QUALITY_PRESETS, type QualityPreset } from "@/lib/types";
+
+const PRESETS = Object.entries(QUALITY_PRESETS) as [
+  QualityPreset,
+  (typeof QUALITY_PRESETS)[QualityPreset],
+][];
 
 interface ProductionStudioProps {
   generating: boolean;
@@ -43,9 +46,9 @@ export function ProductionStudio({
   onGenerateSequence,
 }: ProductionStudioProps) {
   const [sequence, setSequence] = useState<ProductionSequence>(defaultSequence);
+  const [preset, setPreset] = useState<QualityPreset>("cinematic");
   const [selectedId, setSelectedId] = useState<string>("");
   const [batchProgress, setBatchProgress] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const saved = loadSequence();
@@ -90,40 +93,22 @@ export function ProductionStudio({
     });
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const { dataUrl, imageSize } = await fileToReferenceDataUrl(file);
-      setSequence((s) => ({
-        ...s,
-        referenceImage: dataUrl,
-        imageSize,
-      }));
-    } catch {
-      /* invalid file */
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
-  };
-
   const buildPayload = useCallback(
     (shot: ProductionShot): ProductionGeneratePayload | null => {
-      if (!sequence.referenceImage || !shot.action.trim()) return null;
+      if (!shot.action.trim()) return null;
+      const { character, environment, look } = sequence.bible;
+      if (!character.trim() || !environment.trim() || !look.trim()) return null;
       return {
-        referenceImage: sequence.referenceImage,
         imageSize: sequence.imageSize,
         bible: sequence.bible,
         shotAction: shot.action.trim(),
         shotLabel: shot.label,
         sequenceName: sequence.name,
         seed: sequence.seed,
-        preset: "cinematic",
+        preset,
       };
     },
-    [sequence]
+    [sequence, preset]
   );
 
   const handleOne = async () => {
@@ -148,20 +133,22 @@ export function ProductionStudio({
   const preview =
     selected && assembleShotPrompt(sequence.bible, selected.action);
 
-  const canGenerate =
-    Boolean(sequence.referenceImage) &&
-    sequence.shots.some((s) => s.action.trim());
+  const bibleReady =
+    sequence.bible.character.trim() &&
+    sequence.bible.environment.trim() &&
+    sequence.bible.look.trim();
+  const canGenerate = bibleReady && sequence.shots.some((s) => s.action.trim());
 
   return (
-    <div className="glass glow-accent rounded-2xl p-6 lg:p-8">
-      <motion.div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <motion.div className="glass glow-accent rounded-2xl p-6 lg:p-8">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-amber-400" />
+            <Clapperboard className="h-5 w-5 text-amber-400" />
             <h2 className="text-lg font-semibold">Production Pipeline</h2>
           </div>
           <p className="mt-1 text-xs text-zinc-500">
-            I2V · locked reference frame · Wan2.2-I2V-A14B
+            Text-to-video · shared creative bible · Wan2.2-T2V
           </p>
         </div>
         <button
@@ -176,67 +163,25 @@ export function ProductionStudio({
         >
           Load bunker template
         </button>
-      </motion.div>
+      </div>
 
       <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs leading-relaxed text-amber-200/90">
-        <strong className="text-amber-100">Pro workflow:</strong> Upload one
-        master still (character + location). Every shot uses the same reference
-        so face, uniform, and environment stay consistent across ~5s clips.
+        <strong className="text-amber-100">Series workflow:</strong> Define
+        character, environment, and look once — every shot is generated from
+        text with the same creative bible. Each clip can use a{" "}
+        <em>different</em> camera angle and composition instead of copying one
+        reference still.
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div>
-          <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Reference frame (required)
-          </label>
-          <label
-            className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors ${
-              sequence.referenceImage
-                ? "border-violet-500/40 bg-violet-500/5"
-                : "border-white/10 bg-black/20 hover:border-violet-500/30"
-            }`}
-          >
-            {uploading ? (
-              <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
-            ) : sequence.referenceImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={sequence.referenceImage}
-                alt="Reference"
-                className="max-h-48 w-full rounded-lg object-contain"
-              />
-            ) : (
-              <>
-                <ImagePlus className="mb-2 h-8 w-8 text-zinc-600" />
-                <span className="text-sm text-zinc-500">
-                  Upload hero frame (PNG/JPG)
-                </span>
-              </>
-            )}
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              disabled={generating || uploading}
-              onChange={handleImageUpload}
-            />
-          </label>
-          {sequence.referenceImage && (
-            <p className="mt-2 text-xs text-zinc-600">
-              Upload detected · output {imageSizeLabel(sequence.imageSize)} (
-              {sequence.imageSize})
-            </p>
-          )}
-        </div>
-
+        <AspectRatioPicker
+          value={sequence.imageSize}
+          onChange={(imageSize) =>
+            setSequence((s) => ({ ...s, imageSize }))
+          }
+          disabled={generating}
+        />
         <div className="space-y-3">
-          <AspectRatioPicker
-            value={sequence.imageSize}
-            onChange={(imageSize) =>
-              setSequence((s) => ({ ...s, imageSize }))
-            }
-            disabled={generating}
-          />
           <label className="block text-xs font-medium uppercase tracking-wider text-zinc-500">
             Sequence name
           </label>
@@ -249,7 +194,7 @@ export function ProductionStudio({
             className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm focus:border-violet-500/50 focus:outline-none"
           />
           <label className="block text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Seed (optional — lock motion feel)
+            Seed (optional — similar motion feel across shots)
           </label>
           <input
             type="number"
@@ -267,10 +212,36 @@ export function ProductionStudio({
         </div>
       </div>
 
-      <motion.div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div>
+      <div className="mt-6">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
+          Quality preset
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {PRESETS.map(([key, config]) => (
+            <button
+              key={key}
+              type="button"
+              disabled={generating}
+              onClick={() => setPreset(key)}
+              className={`rounded-xl border px-3 py-2.5 text-left transition-all ${
+                preset === key
+                  ? "border-violet-500/60 bg-violet-500/15 text-violet-200 ring-1 ring-violet-500/40"
+                  : "border-white/5 bg-white/5 text-zinc-400 hover:border-white/15"
+              }`}
+            >
+              <span className="block text-sm font-medium">{config.label}</span>
+              <span className="mt-0.5 block text-[10px] opacity-70">
+                {config.hint}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <motion.div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Character
+            Character (series-wide)
           </label>
           <textarea
             value={sequence.bible.character}
@@ -284,10 +255,10 @@ export function ProductionStudio({
             disabled={generating}
             className="w-full resize-y rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-violet-500/50 focus:outline-none"
           />
-        </div>
-        <div>
+        </motion.div>
+        <motion.div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Environment
+            Environment (series-wide)
           </label>
           <textarea
             value={sequence.bible.environment}
@@ -301,10 +272,10 @@ export function ProductionStudio({
             disabled={generating}
             className="w-full resize-y rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-violet-500/50 focus:outline-none"
           />
-        </div>
-        <div>
+        </motion.div>
+        <motion.div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Cinematic look
+            Cinematic look (series-wide)
           </label>
           <textarea
             value={sequence.bible.look}
@@ -318,13 +289,13 @@ export function ProductionStudio({
             disabled={generating}
             className="w-full resize-y rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-violet-500/50 focus:outline-none"
           />
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       <div className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Shot list
+            Shot list — unique action per clip
           </p>
           <button
             type="button"
@@ -374,7 +345,7 @@ export function ProductionStudio({
                   }
                   rows={2}
                   disabled={generating}
-                  placeholder="One action + one camera move for this 5s clip"
+                  placeholder="This shot only: action + camera move (e.g. wide establishing, close-up, over-shoulder)"
                   className="w-full resize-y rounded-lg border border-white/5 bg-black/30 px-3 py-2 text-sm focus:outline-none"
                 />
               )}
@@ -382,6 +353,12 @@ export function ProductionStudio({
           ))}
         </div>
       </div>
+
+      {!bibleReady && (
+        <p className="mt-4 text-xs text-amber-400/90">
+          Fill in character, environment, and cinematic look to enable generation.
+        </p>
+      )}
 
       {selected && preview && (
         <details className="mt-4 rounded-lg border border-white/5 bg-black/20 p-3">
@@ -432,6 +409,6 @@ export function ProductionStudio({
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

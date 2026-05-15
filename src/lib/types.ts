@@ -15,7 +15,7 @@ export type QualityPreset =
 
 export type PresetTier = "fast" | "quality";
 
-export type GenerationMode = "t2v" | "i2v";
+export type GenerationMode = "t2v" | "i2v" | "production";
 
 export interface VideoTask {
   id: string;

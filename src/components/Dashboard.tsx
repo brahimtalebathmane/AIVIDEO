@@ -88,7 +88,7 @@ export function Dashboard() {
                 <span className="gradient-text">AI Video Studio</span>
               </h1>
               <p className="text-xs text-zinc-500">
-                Production I2V · Wan2.2 · SiliconFlow
+                Production sequences · Wan2.2 · SiliconFlow
               </p>
             </div>
           </div>
@@ -205,7 +205,7 @@ export function Dashboard() {
                   const result = await generateProductionShot(payload);
                   if (result.success) {
                     toast(
-                      `${payload.shotLabel} queued with locked reference`,
+                      `${payload.shotLabel} queued — series bible applied`,
                       "success"
                     );
                   } else {

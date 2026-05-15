@@ -50,15 +50,7 @@ export async function POST(request: NextRequest) {
     }
     let requestId: string;
 
-    if (mode === "i2v") {
-      const referenceImage = String(body.referenceImage ?? "").trim();
-      if (!referenceImage.startsWith("data:image/")) {
-        return NextResponse.json(
-          { error: "Reference image is required for production mode" },
-          { status: 400 }
-        );
-      }
-
+    if (mode === "production" || mode === "i2v") {
       const shotAction = String(body.shotAction ?? "").trim();
       if (!shotAction) {
         return NextResponse.json(
@@ -77,15 +69,39 @@ export async function POST(request: NextRequest) {
         shotAction
       );
 
-      const result = await submitImageToVideo({
-        prompt: fullPrompt + presetConfig.suffix,
-        imageSize,
-        image: referenceImage,
-        model: i2vModel,
-        negativePrompt: NEGATIVE_PROMPT,
-        seed,
-      });
-      requestId = result.requestId;
+      const referenceImage = String(body.referenceImage ?? "").trim();
+      const useImage =
+        mode === "i2v" && referenceImage.startsWith("data:image/");
+
+      if (useImage) {
+        const result = await submitImageToVideo({
+          prompt: fullPrompt + presetConfig.suffix,
+          imageSize,
+          image: referenceImage,
+          model: i2vModel,
+          negativePrompt: NEGATIVE_PROMPT,
+          seed,
+        });
+        requestId = result.requestId;
+      } else {
+        if (mode === "i2v") {
+          return NextResponse.json(
+            {
+              error:
+                "Reference image is required for I2V mode. Use production mode for text-only sequences.",
+            },
+            { status: 400 }
+          );
+        }
+        const result = await submitVideoGeneration({
+          prompt: fullPrompt + presetConfig.suffix,
+          imageSize,
+          model: t2vModel,
+          negativePrompt: NEGATIVE_PROMPT,
+          seed,
+        });
+        requestId = result.requestId;
+      }
     } else {
       const prompt = String(body.prompt ?? "").trim();
       if (!prompt) {

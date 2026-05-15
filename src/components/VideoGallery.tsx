@@ -81,9 +81,9 @@ function VideoCard({ task }: { task: VideoTask }) {
 
       <div className="p-4">
         <motion.div className="mb-1 flex flex-wrap items-center gap-1.5">
-          {task.mode === "i2v" && (
+          {(task.mode === "production" || task.mode === "i2v") && (
             <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300">
-              I2V
+              {task.mode === "production" ? "SEQ" : "I2V"}
             </span>
           )}
           {task.shotLabel && (
