@@ -1,5 +1,49 @@
 export type ImageSize = "1280x720" | "720x1280" | "960x960";
 
+export const VALID_IMAGE_SIZES: ImageSize[] = [
+  "1280x720",
+  "720x1280",
+  "960x960",
+];
+
+export const VIDEO_ASPECT_OPTIONS = [
+  {
+    id: "landscape",
+    label: "16:9",
+    hint: "Landscape · YouTube",
+    imageSize: "1280x720" as const,
+  },
+  {
+    id: "portrait",
+    label: "9:16",
+    hint: "Portrait · Reels / TikTok",
+    imageSize: "720x1280" as const,
+  },
+  {
+    id: "square",
+    label: "1:1",
+    hint: "Square · feed posts",
+    imageSize: "960x960" as const,
+  },
+] as const;
+
+export function isValidImageSize(value: string): value is ImageSize {
+  return VALID_IMAGE_SIZES.includes(value as ImageSize);
+}
+
+export function imageSizeLabel(size: string): string {
+  switch (size) {
+    case "720x1280":
+      return "9:16";
+    case "1280x720":
+      return "16:9";
+    case "960x960":
+      return "1:1";
+    default:
+      return size;
+  }
+}
+
 export interface ProductionBible {
   character: string;
   environment: string;
@@ -25,7 +69,7 @@ export interface ProductionSequence {
 export const API_PROMPT_MAX = 2200;
 
 export const NEGATIVE_PROMPT =
-  "blurry, low quality, distorted, watermark, text overlay, static image, cartoon, exaggerated motion, morphing face, duplicate limbs";
+  "blurry, low quality, distorted, watermark, text overlay, static image, frozen frame, jittery motion, flickering, warped body, extra fingers, deformed hands, melting textures, morphing face, duplicate limbs, inconsistent lighting, glitch artifacts, frame tearing, oversaturated, plastic skin, cartoon when not intended, exaggerated motion, unnatural movement, posterization, noise, compression artifacts";
 
 export const DEFAULT_BIBLE: ProductionBible = {
   character:
@@ -98,7 +142,7 @@ export function assembleShotPrompt(
     bible.environment.trim(),
     bible.character.trim(),
     shotAction.trim(),
-    "Natural subtle motion only for this moment. Single continuous take.",
+    "Natural subtle motion only for this moment. Single continuous take. Temporally stable motion, no morphing or geometry drift.",
   ].filter(Boolean);
   return truncatePrompt(parts.join(" "));
 }

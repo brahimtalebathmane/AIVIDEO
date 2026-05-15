@@ -1,10 +1,18 @@
 const SILICONFLOW_BASE = "https://api.siliconflow.com/v1";
-/** Wan2.1 models are deprecated on SiliconFlow — use Wan2.2 */
+/** Wan2.2 — highest quality; slower than Turbo */
 export const VIDEO_MODEL =
   process.env.SILICONFLOW_VIDEO_MODEL ?? "Wan-AI/Wan2.2-T2V-A14B";
 
 export const I2V_MODEL =
   process.env.SILICONFLOW_I2V_MODEL ?? "Wan-AI/Wan2.2-I2V-A14B";
+
+export const TURBO_T2V_MODEL =
+  process.env.SILICONFLOW_TURBO_T2V_MODEL ??
+  "Wan-AI/Wan2.1-T2V-14B-720P-Turbo";
+
+export const TURBO_I2V_MODEL =
+  process.env.SILICONFLOW_TURBO_I2V_MODEL ??
+  "Wan-AI/Wan2.1-I2V-14B-720P-Turbo";
 
 export type SiliconVideoStatus =
   | "Succeed"
@@ -63,11 +71,12 @@ async function siliconFetch<T>(
 export async function submitVideoGeneration(params: {
   prompt: string;
   imageSize: string;
+  model?: string;
   negativePrompt?: string;
   seed?: number;
 }): Promise<SubmitVideoResponse> {
   return siliconFetch<SubmitVideoResponse>("/video/submit", {
-    model: VIDEO_MODEL,
+    model: params.model ?? VIDEO_MODEL,
     prompt: params.prompt,
     image_size: params.imageSize,
     ...(params.negativePrompt && {
@@ -81,11 +90,12 @@ export async function submitImageToVideo(params: {
   prompt: string;
   imageSize: string;
   image: string;
+  model?: string;
   negativePrompt?: string;
   seed?: number;
 }): Promise<SubmitVideoResponse> {
   return siliconFetch<SubmitVideoResponse>("/video/submit", {
-    model: I2V_MODEL,
+    model: params.model ?? I2V_MODEL,
     prompt: params.prompt,
     image_size: params.imageSize,
     image: params.image,
@@ -100,6 +110,21 @@ export async function getVideoStatus(
   requestId: string
 ): Promise<VideoStatusResponse> {
   return siliconFetch<VideoStatusResponse>("/video/status", { requestId });
+}
+
+/**
+ * Best-effort remote cancel. SiliconFlow may not expose this endpoint;
+ * local task cancellation still stops polling and UI work immediately.
+ */
+export async function cancelVideoGeneration(
+  requestId: string
+): Promise<boolean> {
+  try {
+    await siliconFetch<{ ok?: boolean }>("/video/cancel", { requestId });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function mapSiliconStatusToTask(

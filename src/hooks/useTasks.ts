@@ -6,10 +6,17 @@ import {
   mergeTasks,
   saveClientTasks,
 } from "@/lib/client-storage";
-import type { ProductionBible, ImageSize } from "@/lib/production";
+import type { ImageSize, ProductionBible } from "@/lib/production";
 import type { QualityPreset, VideoTask } from "@/lib/types";
 
-const POLL_INTERVAL = 4000;
+const POLL_INTERVAL_IDLE = 6000;
+const POLL_INTERVAL_ACTIVE = 2500;
+
+const PENDING_STATUSES = ["queued", "generating", "downloading"] as const;
+
+function isPending(status: VideoTask["status"]): boolean {
+  return (PENDING_STATUSES as readonly string[]).includes(status);
+}
 
 function applyTasks(
   serverTasks: VideoTask[],
@@ -41,6 +48,8 @@ export function useTasks() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tasksRef = useRef<VideoTask[]>([]);
+  const sequenceAbortRef = useRef(false);
+  const submitAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     tasksRef.current = tasks;
@@ -69,9 +78,7 @@ export function useTasks() {
 
   const pollTasks = useCallback(async () => {
     const current = tasksRef.current;
-    const hasPending = current.some((t) =>
-      ["queued", "generating", "downloading"].includes(t.status)
-    );
+    const hasPending = current.some((t) => isPending(t.status));
     if (!hasPending) return;
 
     try {
@@ -85,11 +92,12 @@ export function useTasks() {
   }, []);
 
   const postGenerate = useCallback(
-    async (body: Record<string, unknown>) => {
+    async (body: Record<string, unknown>, signal?: AbortSignal) => {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -98,12 +106,64 @@ export function useTasks() {
     []
   );
 
+  const cancelTask = useCallback(async (taskId: string) => {
+    const res = await fetch(`/api/tasks/${taskId}/cancel`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Cancel failed");
+
+    const updated = data.task as VideoTask;
+    const next = tasksRef.current.map((t) =>
+      t.id === taskId ? updated : t
+    );
+    tasksRef.current = next;
+    setTasks(next);
+    saveClientTasks(next);
+    setReadyVideos(next.filter((t) => t.status === "ready" && t.videoUrl));
+    return updated;
+  }, []);
+
+  const cancelAllPending = useCallback(async () => {
+    submitAbortRef.current?.abort();
+    sequenceAbortRef.current = true;
+
+    const pending = tasksRef.current.filter((t) => isPending(t.status));
+    const results = await Promise.allSettled(
+      pending.map((t) => cancelTask(t.id))
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    if (failed > 0 && pending.length === failed) {
+      throw new Error("Failed to cancel tasks");
+    }
+    pollTasks();
+  }, [cancelTask, pollTasks]);
+
+  const cancelSequence = useCallback(() => {
+    sequenceAbortRef.current = true;
+    submitAbortRef.current?.abort();
+  }, []);
+
   const generate = useCallback(
-    async (prompt: string, preset: QualityPreset) => {
+    async (
+      prompt: string,
+      preset: QualityPreset,
+      imageSize?: ImageSize
+    ) => {
       setGenerating(true);
       setError(null);
+      const controller = new AbortController();
+      submitAbortRef.current = controller;
       try {
-        const task = await postGenerate({ prompt, preset, mode: "t2v" });
+        const task = await postGenerate(
+          {
+            prompt,
+            preset,
+            mode: "t2v",
+            ...(imageSize ? { imageSize } : {}),
+          },
+          controller.signal
+        );
         const next = [task, ...tasksRef.current];
         tasksRef.current = next;
         setTasks(next);
@@ -111,11 +171,15 @@ export function useTasks() {
         pollTasks();
         return { success: true as const };
       } catch (err) {
+        if (controller.signal.aborted) {
+          return { success: false as const, error: "Cancelled" };
+        }
         const message =
           err instanceof Error ? err.message : "Generation failed";
         setError(message);
         return { success: false as const, error: message };
       } finally {
+        submitAbortRef.current = null;
         setGenerating(false);
       }
     },
@@ -126,18 +190,23 @@ export function useTasks() {
     async (payload: ProductionGeneratePayload) => {
       setGenerating(true);
       setError(null);
+      const controller = new AbortController();
+      submitAbortRef.current = controller;
       try {
-        const task = await postGenerate({
-          mode: "i2v",
-          preset: payload.preset ?? "cinematic",
-          referenceImage: payload.referenceImage,
-          imageSize: payload.imageSize,
-          bible: payload.bible,
-          shotAction: payload.shotAction,
-          shotLabel: payload.shotLabel,
-          sequenceName: payload.sequenceName,
-          ...(payload.seed != null ? { seed: payload.seed } : {}),
-        });
+        const task = await postGenerate(
+          {
+            mode: "i2v",
+            preset: payload.preset ?? "cinematic",
+            referenceImage: payload.referenceImage,
+            imageSize: payload.imageSize,
+            bible: payload.bible,
+            shotAction: payload.shotAction,
+            shotLabel: payload.shotLabel,
+            sequenceName: payload.sequenceName,
+            ...(payload.seed != null ? { seed: payload.seed } : {}),
+          },
+          controller.signal
+        );
         const next = [task, ...tasksRef.current];
         tasksRef.current = next;
         setTasks(next);
@@ -145,11 +214,15 @@ export function useTasks() {
         pollTasks();
         return { success: true as const };
       } catch (err) {
+        if (controller.signal.aborted) {
+          return { success: false as const, error: "Cancelled" };
+        }
         const message =
           err instanceof Error ? err.message : "Generation failed";
         setError(message);
         return { success: false as const, error: message };
       } finally {
+        submitAbortRef.current = null;
         setGenerating(false);
       }
     },
@@ -163,47 +236,76 @@ export function useTasks() {
     ) => {
       setGenerating(true);
       setError(null);
+      sequenceAbortRef.current = false;
       let success = 0;
       let failed = 0;
+      let cancelled = false;
       let lastError: string | undefined;
 
       for (let i = 0; i < payloads.length; i++) {
+        if (sequenceAbortRef.current) {
+          cancelled = true;
+          break;
+        }
+
         onProgress?.(i, payloads.length);
+        const controller = new AbortController();
+        submitAbortRef.current = controller;
+
         try {
-          const task = await postGenerate({
-            mode: "i2v",
-            preset: payloads[i].preset ?? "cinematic",
-            referenceImage: payloads[i].referenceImage,
-            imageSize: payloads[i].imageSize,
-            bible: payloads[i].bible,
-            shotAction: payloads[i].shotAction,
-            shotLabel: payloads[i].shotLabel,
-            sequenceName: payloads[i].sequenceName,
-            ...(payloads[i].seed != null
-              ? { seed: payloads[i].seed }
-              : {}),
-          });
+          const task = await postGenerate(
+            {
+              mode: "i2v",
+              preset: payloads[i].preset ?? "cinematic",
+              referenceImage: payloads[i].referenceImage,
+              imageSize: payloads[i].imageSize,
+              bible: payloads[i].bible,
+              shotAction: payloads[i].shotAction,
+              shotLabel: payloads[i].shotLabel,
+              sequenceName: payloads[i].sequenceName,
+              ...(payloads[i].seed != null
+                ? { seed: payloads[i].seed }
+                : {}),
+            },
+            controller.signal
+          );
           tasksRef.current = [task, ...tasksRef.current];
           success++;
-          await new Promise((r) => setTimeout(r, 1000));
+          if (sequenceAbortRef.current) {
+            cancelled = true;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 800));
         } catch (err) {
+          if (controller.signal.aborted || sequenceAbortRef.current) {
+            cancelled = true;
+            break;
+          }
           failed++;
           lastError =
             err instanceof Error ? err.message : "Generation failed";
+        } finally {
+          submitAbortRef.current = null;
         }
+      }
+
+      if (cancelled) {
+        const pending = tasksRef.current.filter((t) => isPending(t.status));
+        await Promise.allSettled(pending.map((t) => cancelTask(t.id)));
       }
 
       onProgress?.(payloads.length, payloads.length);
       setTasks([...tasksRef.current]);
       saveClientTasks(tasksRef.current);
       setGenerating(false);
+      sequenceAbortRef.current = false;
       pollTasks();
 
-      if (lastError && success === 0) setError(lastError);
+      if (lastError && success === 0 && !cancelled) setError(lastError);
 
-      return { success, failed, error: lastError };
+      return { success, failed, cancelled, error: lastError };
     },
-    [pollTasks, postGenerate]
+    [cancelTask, pollTasks, postGenerate]
   );
 
   useEffect(() => {
@@ -217,14 +319,14 @@ export function useTasks() {
     fetchTasks();
   }, [fetchTasks]);
 
-  useEffect(() => {
-    const id = setInterval(pollTasks, POLL_INTERVAL);
-    return () => clearInterval(id);
-  }, [pollTasks]);
+  const hasPending = tasks.some((t) => isPending(t.status));
+  const pendingTasks = tasks.filter((t) => isPending(t.status));
 
-  const hasPending = tasks.some((t) =>
-    ["queued", "generating", "downloading"].includes(t.status)
-  );
+  useEffect(() => {
+    const interval = hasPending ? POLL_INTERVAL_ACTIVE : POLL_INTERVAL_IDLE;
+    const id = setInterval(pollTasks, interval);
+    return () => clearInterval(id);
+  }, [hasPending, pollTasks]);
 
   useEffect(() => {
     if (hasPending) pollTasks();
@@ -233,6 +335,7 @@ export function useTasks() {
   return {
     tasks,
     readyVideos,
+    pendingTasks,
     loading,
     generating,
     hasPending,
@@ -241,6 +344,9 @@ export function useTasks() {
     generate,
     generateProductionShot,
     generateProductionSequence,
+    cancelTask,
+    cancelAllPending,
+    cancelSequence,
     refresh: fetchTasks,
   };
 }

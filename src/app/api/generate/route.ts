@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { assembleShotPrompt, NEGATIVE_PROMPT } from "@/lib/production";
 import {
+  assembleShotPrompt,
+  isValidImageSize,
+  NEGATIVE_PROMPT,
+} from "@/lib/production";
+import {
+  I2V_MODEL,
   submitImageToVideo,
   submitVideoGeneration,
+  VIDEO_MODEL,
 } from "@/lib/siliconflow";
 import { QUALITY_PRESETS, type GenerationMode, type QualityPreset } from "@/lib/types";
 
@@ -33,8 +39,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const t2vModel = presetConfig.t2vModel ?? VIDEO_MODEL;
+    const i2vModel = presetConfig.i2vModel ?? I2V_MODEL;
+
     let fullPrompt: string;
     let imageSize = presetConfig.imageSize;
+    if (body.imageSize && isValidImageSize(String(body.imageSize))) {
+      imageSize = body.imageSize;
+    }
     let requestId: string;
 
     if (mode === "i2v") {
@@ -64,14 +76,11 @@ export async function POST(request: NextRequest) {
         shotAction
       );
 
-      if (body.imageSize) {
-        imageSize = String(body.imageSize);
-      }
-
       const result = await submitImageToVideo({
         prompt: fullPrompt + presetConfig.suffix,
         imageSize,
         image: referenceImage,
+        model: i2vModel,
         negativePrompt: NEGATIVE_PROMPT,
         seed,
       });
@@ -88,6 +97,7 @@ export async function POST(request: NextRequest) {
       const result = await submitVideoGeneration({
         prompt: fullPrompt,
         imageSize,
+        model: t2vModel,
         negativePrompt: NEGATIVE_PROMPT,
         seed,
       });

@@ -31,6 +31,11 @@ const STATUS_CONFIG: Record<
     emoji: "❌",
     className: "bg-red-500/20 text-red-300 ring-red-500/30",
   },
+  cancelled: {
+    label: "Cancelled",
+    emoji: "⏹",
+    className: "bg-zinc-500/20 text-zinc-400 ring-zinc-500/30",
+  },
 };
 
 export function StatusBadge({ status }: { status: TaskStatus }) {

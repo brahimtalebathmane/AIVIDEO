@@ -11,12 +11,14 @@ import {
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 import type { ProductionGeneratePayload } from "@/hooks/useTasks";
 import { fileToReferenceDataUrl } from "@/lib/image-utils";
 import {
   assembleShotPrompt,
   createShotId,
   defaultSequence,
+  imageSizeLabel,
   type ProductionSequence,
   type ProductionShot,
 } from "@/lib/production";
@@ -24,6 +26,7 @@ import { loadSequence, saveSequence } from "@/lib/project-storage";
 
 interface ProductionStudioProps {
   generating: boolean;
+  onCancelSequence?: () => void;
   onGenerateShot: (
     payload: ProductionGeneratePayload
   ) => Promise<{ success: boolean; error?: string }>;
@@ -35,6 +38,7 @@ interface ProductionStudioProps {
 
 export function ProductionStudio({
   generating,
+  onCancelSequence,
   onGenerateShot,
   onGenerateSequence,
 }: ProductionStudioProps) {
@@ -219,12 +223,20 @@ export function ProductionStudio({
           </label>
           {sequence.referenceImage && (
             <p className="mt-2 text-xs text-zinc-600">
-              Output: {sequence.imageSize} · same image for all shots
+              Upload detected · output {imageSizeLabel(sequence.imageSize)} (
+              {sequence.imageSize})
             </p>
           )}
         </div>
 
         <div className="space-y-3">
+          <AspectRatioPicker
+            value={sequence.imageSize}
+            onChange={(imageSize) =>
+              setSequence((s) => ({ ...s, imageSize }))
+            }
+            disabled={generating}
+          />
           <label className="block text-xs font-medium uppercase tracking-wider text-zinc-500">
             Sequence name
           </label>
@@ -394,19 +406,31 @@ export function ProductionStudio({
           )}
           Generate {selected?.label ?? "shot"}
         </button>
-        <button
-          type="button"
-          disabled={generating || !canGenerate}
-          onClick={handleAll}
-          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-600 py-4 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
-        >
-          {generating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={generating || !canGenerate}
+            onClick={handleAll}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-600 py-4 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
+          >
+            {generating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {batchProgress ?? `Generate all ${sequence.shots.length} shots`}
+          </button>
+          {generating && batchProgress && onCancelSequence && (
+            <button
+              type="button"
+              onClick={onCancelSequence}
+              className="shrink-0 rounded-xl border border-red-500/40 bg-red-500/15 px-4 text-sm font-medium text-red-300 hover:bg-red-500/25"
+              title="Stop queuing shots and cancel active jobs"
+            >
+              Stop
+            </button>
           )}
-          {batchProgress ?? `Generate all ${sequence.shots.length} shots`}
-        </button>
+        </div>
       </div>
     </div>
   );

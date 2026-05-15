@@ -13,7 +13,7 @@ async function pollTask(taskId: string) {
   const task = await db.getTaskById(taskId);
   if (!task) return null;
 
-  if (["ready", "failed"].includes(task.status)) {
+  if (["ready", "failed", "cancelled"].includes(task.status)) {
     return task;
   }
 

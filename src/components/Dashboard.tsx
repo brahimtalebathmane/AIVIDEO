@@ -18,6 +18,7 @@ export function Dashboard() {
   const {
     tasks,
     readyVideos,
+    pendingTasks,
     loading,
     generating,
     hasPending,
@@ -26,6 +27,9 @@ export function Dashboard() {
     generate,
     generateProductionShot,
     generateProductionSequence,
+    cancelTask,
+    cancelAllPending,
+    cancelSequence,
     refresh,
   } = useTasks();
 
@@ -83,7 +87,19 @@ export function Dashboard() {
 
           <AnimatePresence>
             {(generating || hasPending) && (
-              <GeneratingBanner active={generating || hasPending} />
+              <GeneratingBanner
+                active={generating || hasPending}
+                pendingTasks={pendingTasks}
+                onCancelAll={async () => {
+                  try {
+                    cancelSequence();
+                    await cancelAllPending();
+                    toast("Generation stopped", "info");
+                  } catch {
+                    toast("Could not cancel all tasks", "error");
+                  }
+                }}
+              />
             )}
           </AnimatePresence>
 
@@ -112,8 +128,9 @@ export function Dashboard() {
             <div className="space-y-6 xl:col-span-3">
               <StudioShell
                 generating={generating}
-                onQuickGenerate={async (prompt, preset) => {
-                  const result = await generate(prompt, preset);
+                onCancelSequence={cancelSequence}
+                onQuickGenerate={async (prompt, preset, imageSize) => {
+                  const result = await generate(prompt, preset, imageSize);
                   if (result.success) {
                     toast("Quick clip queued — ~2–5 min", "success");
                   } else {
@@ -138,7 +155,9 @@ export function Dashboard() {
                     payloads,
                     onProgress
                   );
-                  if (result.success > 0) {
+                  if (result.cancelled) {
+                    toast("Sequence stopped — pending jobs cancelled", "info");
+                  } else if (result.success > 0) {
                     toast(
                       `${result.success} shots queued${result.failed ? ` · ${result.failed} failed` : ""}`,
                       result.failed ? "info" : "success"
@@ -153,7 +172,17 @@ export function Dashboard() {
             </div>
 
             <div className="xl:col-span-2">
-              <LiveFeed tasks={tasks} />
+              <LiveFeed
+                tasks={tasks}
+                onCancelTask={async (id) => {
+                  try {
+                    await cancelTask(id);
+                    toast("Generation cancelled", "info");
+                  } catch {
+                    toast("Could not cancel task", "error");
+                  }
+                }}
+              />
             </div>
           </div>
         </motion.div>

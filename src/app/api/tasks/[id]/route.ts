@@ -21,6 +21,10 @@ export async function GET(
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
+    if (task.status === "cancelled") {
+      return NextResponse.json({ task });
+    }
+
     if (!["ready", "failed"].includes(task.status)) {
       const statusRes = await getVideoStatus(task.requestId);
       const mapped = mapSiliconStatusToTask(statusRes.status);

@@ -6,6 +6,7 @@ import { useState } from "react";
 import type {
   ProductionGeneratePayload,
 } from "@/hooks/useTasks";
+import type { ImageSize } from "@/lib/production";
 import type { QualityPreset } from "@/lib/types";
 import { GenerationForm } from "./GenerationForm";
 import { ProductionStudio } from "./ProductionStudio";
@@ -14,9 +15,11 @@ type Tab = "production" | "quick";
 
 interface StudioShellProps {
   generating: boolean;
+  onCancelSequence?: () => void;
   onQuickGenerate: (
     prompt: string,
-    preset: QualityPreset
+    preset: QualityPreset,
+    imageSize: ImageSize
   ) => Promise<{ success: boolean; error?: string }>;
   onProductionShot: (
     payload: ProductionGeneratePayload
@@ -24,11 +27,17 @@ interface StudioShellProps {
   onProductionSequence: (
     payloads: ProductionGeneratePayload[],
     onProgress?: (done: number, total: number) => void
-  ) => Promise<{ success: number; failed: number; error?: string }>;
+  ) => Promise<{
+    success: number;
+    failed: number;
+    cancelled?: boolean;
+    error?: string;
+  }>;
 }
 
 export function StudioShell({
   generating,
+  onCancelSequence,
   onQuickGenerate,
   onProductionShot,
   onProductionSequence,
@@ -67,6 +76,7 @@ export function StudioShell({
       {tab === "production" ? (
         <ProductionStudio
           generating={generating}
+          onCancelSequence={onCancelSequence}
           onGenerateShot={onProductionShot}
           onGenerateSequence={onProductionSequence}
         />

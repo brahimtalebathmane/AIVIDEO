@@ -3,7 +3,9 @@
 import { motion } from "framer-motion";
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useState } from "react";
+import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 import { PROMPT_MAX_CHARS, SAMPLE_PROMPTS } from "@/lib/constants";
+import type { ImageSize } from "@/lib/production";
 import { QUALITY_PRESETS, type QualityPreset } from "@/lib/types";
 
 const PRESETS = Object.entries(QUALITY_PRESETS) as [
@@ -14,7 +16,8 @@ const PRESETS = Object.entries(QUALITY_PRESETS) as [
 interface GenerationFormProps {
   onGenerate: (
     prompt: string,
-    preset: QualityPreset
+    preset: QualityPreset,
+    imageSize: ImageSize
   ) => Promise<{ success: boolean; error?: string }>;
   generating: boolean;
 }
@@ -22,6 +25,7 @@ interface GenerationFormProps {
 export function GenerationForm({ onGenerate, generating }: GenerationFormProps) {
   const [prompt, setPrompt] = useState("");
   const [preset, setPreset] = useState<QualityPreset>("cinematic");
+  const [imageSize, setImageSize] = useState<ImageSize>("1280x720");
 
   const charCount = prompt.length;
   const overLimit = charCount > PROMPT_MAX_CHARS;
@@ -29,7 +33,7 @@ export function GenerationForm({ onGenerate, generating }: GenerationFormProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || generating || overLimit) return;
-    const result = await onGenerate(prompt.trim(), preset);
+    const result = await onGenerate(prompt.trim(), preset, imageSize);
     if (result.success) setPrompt("");
   };
 
@@ -65,6 +69,14 @@ export function GenerationForm({ onGenerate, generating }: GenerationFormProps) 
         className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-4 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
       />
 
+      <div className="mt-5">
+        <AspectRatioPicker
+          value={imageSize}
+          onChange={setImageSize}
+          disabled={generating}
+        />
+      </div>
+
       <motion.div className="mt-3 flex flex-wrap gap-2">
         <span className="w-full text-xs text-zinc-600">Try a sample:</span>
         {SAMPLE_PROMPTS.map((sample) => (
@@ -87,7 +99,7 @@ export function GenerationForm({ onGenerate, generating }: GenerationFormProps) 
           Quality Preset
         </p>
         <motion.div
-          className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
           variants={{
             hidden: {},
             show: { transition: { staggerChildren: 0.05 } },
@@ -105,13 +117,16 @@ export function GenerationForm({ onGenerate, generating }: GenerationFormProps) 
               }}
               disabled={generating}
               onClick={() => setPreset(key)}
-              className={`rounded-xl border px-3 py-3 text-sm font-medium transition-all ${
+              className={`rounded-xl border px-3 py-3 text-left transition-all ${
                 preset === key
                   ? "border-violet-500/60 bg-violet-500/15 text-violet-200 ring-1 ring-violet-500/40"
                   : "border-white/5 bg-white/5 text-zinc-400 hover:border-white/15 hover:bg-white/10"
               }`}
             >
-              {config.label}
+              <span className="block text-sm font-medium">{config.label}</span>
+              <span className="mt-0.5 block text-[10px] leading-tight opacity-70">
+                {config.hint}
+              </span>
             </motion.button>
           ))}
         </motion.div>
