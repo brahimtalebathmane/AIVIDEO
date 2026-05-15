@@ -1,24 +1,50 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Menu, RefreshCw, Video } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Menu, RefreshCw, Video, X } from "lucide-react";
 import { useState } from "react";
 import { useTasks } from "@/hooks/useTasks";
+import { GeneratingBanner } from "./GeneratingBanner";
 import { GenerationForm } from "./GenerationForm";
 import { LiveFeed } from "./LiveFeed";
 import { Sidebar } from "./Sidebar";
+import { StatsBar } from "./StatsBar";
+import { useToast } from "./Toast";
 import { VideoGallery } from "./VideoGallery";
 
 export function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { tasks, readyVideos, loading, generating, error, generate, refresh } =
-    useTasks();
+  const { toast } = useToast();
+  const {
+    tasks,
+    readyVideos,
+    loading,
+    generating,
+    hasPending,
+    error,
+    setError,
+    generate,
+    refresh,
+  } = useTasks();
+
+  const handleGenerate = async (
+    prompt: string,
+    preset: Parameters<typeof generate>[1]
+  ) => {
+    const result = await generate(prompt, preset);
+    if (result.success) {
+      toast("Video job queued — usually ready in 2–5 minutes", "success");
+    } else {
+      toast(result.error ?? "Generation failed", "error");
+    }
+    return result;
+  };
 
   return (
     <div className="flex min-h-screen">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <main className="flex min-h-screen flex-1 flex-col">
+      <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="glass-strong sticky top-0 z-30 flex items-center justify-between border-b px-4 py-4 lg:px-8">
           <motion.div className="flex items-center gap-4">
             <button
@@ -29,14 +55,14 @@ export function Dashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div>
+            <motion.div>
               <h1 className="text-xl font-bold tracking-tight lg:text-2xl">
                 <span className="gradient-text">AI Video Studio</span>
               </h1>
               <p className="text-xs text-zinc-500">
-                Text-to-video powered by Wan2.1-T2V-14B
+                Wan2.1-T2V-14B · 720P · SiliconFlow
               </p>
-            </div>
+            </motion.div>
           </motion.div>
 
           <div className="flex items-center gap-2">
@@ -64,29 +90,48 @@ export function Dashboard() {
           animate={{ opacity: 1 }}
           className="flex-1 space-y-6 p-4 lg:p-8"
         >
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
-            >
-              {error}
-            </motion.div>
-          )}
+          <StatsBar tasks={tasks} generating={generating || hasPending} />
 
-          <motion.div className="grid gap-6 xl:grid-cols-5">
+          <AnimatePresence>
+            {(generating || hasPending) && (
+              <GeneratingBanner active={generating || hasPending} />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex items-start justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+              >
+                <p className="flex-1">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="shrink-0 opacity-70 hover:opacity-100"
+                  aria-label="Dismiss error"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="grid gap-6 xl:grid-cols-5">
             <div className="space-y-6 xl:col-span-3">
               <GenerationForm
-                onGenerate={generate}
+                onGenerate={handleGenerate}
                 generating={generating}
               />
               <VideoGallery videos={readyVideos} />
             </div>
 
-            <div className="xl:col-span-2">
+            <motion.div className="xl:col-span-2">
               <LiveFeed tasks={tasks} />
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </motion.div>
       </main>
     </div>

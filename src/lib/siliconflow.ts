@@ -1,5 +1,7 @@
 const SILICONFLOW_BASE = "https://api.siliconflow.com/v1";
-export const VIDEO_MODEL = "Wan-AI/Wan2.1-T2V-14B";
+/** 720P variant — base Wan2.1-T2V-14B is disabled on SiliconFlow API */
+export const VIDEO_MODEL =
+  process.env.SILICONFLOW_VIDEO_MODEL ?? "Wan-AI/Wan2.1-T2V-14B-720P";
 
 export type SiliconVideoStatus =
   | "Succeed"

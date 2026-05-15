@@ -2,19 +2,27 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { TasksDatabase, VideoTask } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const TASKS_FILE = path.join(DATA_DIR, "tasks.json");
+function getDataDir(): string {
+  if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join("/tmp", "nexus-video");
+  }
+  return path.join(process.cwd(), "data");
+}
+
+function getTasksFile(): string {
+  return path.join(getDataDir(), "tasks.json");
+}
 
 const EMPTY_DB: TasksDatabase = { tasks: [] };
 
 async function ensureDataDir(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  await fs.mkdir(getDataDir(), { recursive: true });
 }
 
 async function readDb(): Promise<TasksDatabase> {
   try {
     await ensureDataDir();
-    const raw = await fs.readFile(TASKS_FILE, "utf-8");
+    const raw = await fs.readFile(getTasksFile(), "utf-8");
     return JSON.parse(raw) as TasksDatabase;
   } catch {
     return { ...EMPTY_DB };
@@ -23,7 +31,7 @@ async function readDb(): Promise<TasksDatabase> {
 
 async function writeDb(db: TasksDatabase): Promise<void> {
   await ensureDataDir();
-  await fs.writeFile(TASKS_FILE, JSON.stringify(db, null, 2), "utf-8");
+  await fs.writeFile(getTasksFile(), JSON.stringify(db, null, 2), "utf-8");
 }
 
 export async function getAllTasks(): Promise<VideoTask[]> {

@@ -111,6 +111,7 @@ export function VideoGallery({ videos }: VideoGalleryProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
+      className="glass rounded-2xl p-6"
     >
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Video Gallery</h2>
